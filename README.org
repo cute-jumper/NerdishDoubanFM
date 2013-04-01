@@ -71,6 +71,7 @@
 - 显示manual
 - 改善Console输出，加强Console窗口功能，可以考虑加入类似Vim的命令功能。
 - Emacs客户端
+- 加入history
 - 重构代码，目前由于写得比较仓促，有无用冗余和风格奇怪的代码。
 
 ** Acknowledgement

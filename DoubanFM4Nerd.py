@@ -414,58 +414,78 @@ class DownloadManager(object):
             with open(image_abspath, 'wb') as fout:
                 fout.write(r.content)
         return image_abspath
+    def download_song(self, song_info):
+        filename = os.path.join(app_song_download_dir, '%s_%s.mp3' %(song_info['title'], song_info['artist']))
+        if not os.path.isfile(filename):
+            r = requests.get(url, proxies=self.proxy)
+            with open(filename, 'wb') as fout:
+                fout.write(r.content)
+        return True
 
 class MusicPlayer(object):
     def __init__(self):
-        self.player = gst.element_factory_make('playbin2', 'player')
+        self.http_player = gst.parse_launch('souphttpsrc name=httpsrc ! tee name=t ! queue ! filesink name=filedest t. ! queue ! mad ! audioconvert ! alsasink')
+        self.local_player = gst.element_factory_make('playbin2', 'local_player')
         fakesink = gst.element_factory_make("fakesink", "fakesink")
-        self.player.set_property("video-sink", fakesink)
-	bus = self.player.get_bus()
-	bus.add_signal_watch()
-	bus.connect("message", self.on_message)
+        self.local_player.set_property("video-sink", fakesink)
+        self.current_player = None
+	# bus = self.player.get_bus()
+	# bus.add_signal_watch()
+	# bus.connect("message", self.on_message)
         self.play_state = None
         self.playmode = False
         
-    def set_play_state(self, state):
+    def set_play_state(self, player, state):
         self.play_state = state
-        self.player.set_state(state)
+        player.set_state(state)
         
     def get_play_state(self):
         return self.play_state
 
     def play_song(self, uri):
-        self.player.set_property("uri", uri)
-        self.set_play_state(gst.STATE_PLAYING)
+        self.set_play_state(self.http_player, gst.STATE_NULL)
+        self.set_play_state(self.local_player, gst.STATE_NULL)
+        filepath = os.path.join(app_song_download_dir, uri.split('/')[-1])
+        if not os.path.isfile(filepath):
+            self.http_player.get_by_name('httpsrc').set_property('location', uri)
+            self.http_player.get_by_name('filedest').set_property('location', filepath)
+            self.current_player = self.http_player
+            self.set_play_state(self.http_player, gst.STATE_PLAYING)
+        else:
+            self.local_player.set_property('uri', 'file://' + filepath)
+            self.current_player = self.local_player
+            self.set_play_state(self.local_player, gst.STATE_PLAYING)
         self.playmode = True
         
     def stop_song(self):
-        self.set_play_state(gst.STATE_NULL)
+        self.set_play_state(self.http_player, gst.STATE_NULL)
+        self.set_play_state(self.local_player, gst.STATE_NULL)
         self.playmode = False
             
     def toggle_paused_song(self):
         if self.get_play_state() == gst.STATE_PLAYING:
-            self.set_play_state(gst.STATE_PAUSED)
+            self.set_play_state(self.current_player, gst.STATE_PAUSED)
         elif self.get_play_state() == gst.STATE_PAUSED:
-            self.set_play_state(gst.STATE_PLAYING)
+            self.set_play_state(self.current_player, gst.STATE_PLAYING)
         
-    def on_message(self, bus, message):
-        t = message.type
-        if t == gst.MESSAGE_EOS:
-            self.set_play_state(gst.STATE_NULL)
-            self.playmode = False
-        elif t == gst.MESSAGE_ERROR:
-            self.set_play_state(gst.STATE_NULL)
-            err, debug = message.parse_error()
-            print "Error: %s" % err, debug
-            self.playmode = False
+    # def on_message(self, bus, message):
+    #     t = message.type
+    #     if t == gst.MESSAGE_EOS:
+    #         self.set_play_state(gst.STATE_NULL)
+    #         self.playmode = False
+    #     elif t == gst.MESSAGE_ERROR:
+    #         self.set_play_state(gst.STATE_NULL)
+    #         err, debug = message.parse_error()
+    #         print "Error: %s" % err, debug
+    #         self.playmode = False
             
     @property
     def duration(self):
-        return self.player.query_duration(gst.FORMAT_TIME, None)[0]
+        return self.current_player.query_duration(gst.FORMAT_TIME, None)[0]
     
     @property
     def position(self):
-        return self.player.query_position(gst.FORMAT_TIME, None)[0]
+        return self.current_player.query_position(gst.FORMAT_TIME, None)[0]
         
 class DoubanFM(object):
     def __init__(self):
