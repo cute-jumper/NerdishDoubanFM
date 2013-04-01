@@ -45,17 +45,18 @@
   https://github.com/zhendi/DoubanFM-CLI/ 也是采用同一套API。（我采用
   http://www.douban.com/j/app/radio）
   
-** TODO 
-*** [#A] 加入Linux的桌面通知
-*** [#A] 显示完整的频道列表
-*** [#A] 歌词采用异步方式下载
-*** [#B] 改善配置系统，加入代理等功能设置
-*** [#B] 增加下载歌曲功能
-*** [#B] 后台采用Pipeline替代playbin2，测试能否修正playbin2不发送EOS的问题
-*** [#B] 加入播放历史功能，可以提供播放历史列表和前一首，单曲循环等功能
-*** [#C] 显示manual
-*** [#C] 改善Console输出，加强Console窗口功能，可以考虑加入类似Vim的命令功能。
-*** 重构代码，目前由于写得比较仓促，有无用冗余和风格奇怪的代码。
+** TODO TODO
+- 加入Linux的桌面通知
+- 显示完整的频道列表
+- 歌词采用异步方式下载
+- 改善配置系统，加入代理等功能设置
+- 增加下载歌曲功能
+- 后台采用Pipeline替代playbin2，测试能否修正playbin2不发送EOS的问题
+- 加入播放历史功能，可以提供播放历史列表和前一首，单曲循环等功能
+- 显示manual
+- 改善Console输出，加强Console窗口功能，可以考虑加入类似Vim的命令功能。
+- Emacs客户端
+- 重构代码，目前由于写得比较仓促，有无用冗余和风格奇怪的代码。
 
 ** Acknowledgement
 - https://github.com/panxiuqing/doubanfm.py
