@@ -94,13 +94,13 @@ class CursesUI(object):
         self.channel_list = None
         self.dbfm = DoubanFM()
         self.has_lyric = False
-        self.lyric_downloader = LyricDownloader()
+        self.download_manager = DownloadManager()
         self.current_song_info = None
         self.setup_main_win()
         self.setup_left_win()
         self.setup_right_win()
         self.setup_console_win()
-        self.enable_notification = False
+        self.enable_notification = True
     def setup_main_win(self):
         #locale
         locale.setlocale(locale.LC_CTYPE, '')
@@ -142,8 +142,8 @@ class CursesUI(object):
         
     def setup_left_win(self):
         ## left window
-        l_begin_x = 0 ; l_begin_y = 0
-        l_height = 24; l_width = 29
+        l_begin_x, l_begin_y = 0, 0
+        l_height, l_width = 24, 29
         self.left_win = left_win = curses.newwin(l_height, l_width, l_begin_y, l_begin_x)
         left_win.keypad(1)
         self.left_win_restore()
@@ -257,7 +257,7 @@ class CursesUI(object):
         self.has_lyric = False
         self.current_song_info = self.dbfm.get_next_song_info()
         self.show_song_info(self.current_song_info)
-        ret = self.lyric_downloader.download_lyric(self.current_song_info)
+        ret = self.download_manager.download_lyric(self.current_song_info)
         if ret == None:
             self.has_lyric = False
             self.add_console_output('No lyric found!')
@@ -265,6 +265,8 @@ class CursesUI(object):
             self.has_lyric = True
             self.lyrics = ret
             self.add_console_output('Lyric downloaded.')
+        if self.enable_notification:
+            self.send_notification(self.current_song_info)
         p.play_song(self.current_song_info['url'])
         
     def run(self):
@@ -370,13 +372,14 @@ class CursesUI(object):
         return '' #self.lyric[-1][1][:LYRIC_LENGTH] Bugs???
     
     def send_notification(self, song_info):
+        description = '歌手: %s<br/>专辑: %s' %(song_info['artist'], song_info['albumtitle'])
+        image = self.download_manager.download_image(song_info['picture'])
         pynotify.init(song_info['title'])
-        n = pynotify.Notification(title, description, image)
+        n = pynotify.Notification(song_info['title'], description, image)
         n.set_hint_string('x-canonical-append','')
         n.show()
-
         
-class LyricDownloader(object):
+class DownloadManager(object):
     def __init__(self):
         self.proxy = None
     def download_lyric(self, song_info):
@@ -403,6 +406,14 @@ class LyricDownloader(object):
             for ts in timestamps:
                 lyrics[ts] = words
         return sorted(lyrics.items())
+    def download_image(self, image_url):
+        image_basename = image_url.split('/')[-1]
+        image_abspath = os.path.join(app_img_cache_dir, image_basename)
+        if not os.path.isfile(image_abspath):
+            r = requests.get(image_url, proxies=self.proxy)
+            with open(image_abspath, 'wb') as fout:
+                fout.write(r.content)
+        return image_abspath
 
 class MusicPlayer(object):
     def __init__(self):
