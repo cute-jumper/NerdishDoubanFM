@@ -25,8 +25,23 @@
 ** Functions
 - 支持豆瓣FM网络版的大部分功能，包括选电台，播放，暂停，下一首，登陆，加红心，取
   消红心，显示播放进度等
-- 支持自动下载歌词并显示，采用歌词迷的API，见http://api.geci.me/en/latest/index.html
+- 支持自动下载歌词并显示，采用歌词迷的API，见
+  http://api.geci.me/en/latest/index.html
 
+** Usage
+在终端中运行
+: python DoubanFM4Nerd.py
+
+目前尚未完成帮助部分。按键功能说明如下：
+- "j,k,Up,Down"：上下移动光标选择频道，j、k键是Vim习惯
+- "c"：播放该频道
+- "n"：下一首
+- "p"：暂停/播放
+- "l"：用户登陆
+- "r"：标为喜欢
+- "u"：取消喜欢
+- "q"：退出
+ 
 ** Problems
 - 多线程模型采用了一个非常dirty的解决方案。curses库不是thread-safe的，但是显示歌
   曲进度和歌词需要修改curses界面，网上没有找到现成的解决方案。目前采用的方法是在
