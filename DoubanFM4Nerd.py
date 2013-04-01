@@ -5,17 +5,17 @@
 
 import urllib, urllib2, json, requests
 import os
-import pprint
 import curses
 import pynotify
 import gst
 import locale
-import thread
 from select import select
 import sys
 import time
 from ConfigParser import ConfigParser
 from getpass import getpass
+import unicodedata
+import re
 
 app_dir = os.path.dirname(os.path.abspath(__file__))
 app_img_cache_dir = os.path.join(app_dir, '.img')
@@ -39,6 +39,16 @@ douban_fm_channel_url = 'http://www.douban.com/j/app/radio/channels'
 douban_fm_api_url = 'http://www.douban.com/j/app/radio/people'
 lyric_api_url_template = 'http://geci.me/api/lyric/{title}/{artist}'
 MAX_CHANNEL = 7
+LYRIC_LENGTH = 40
+
+def display_len(s):
+    return sum(map(lambda x: 2 if unicodedata.east_asian_width(x) == 'W' else 1, s))
+
+RE = re.compile(u'[⺀-⺙⺛-⻳⼀-⿕々〇〡-〩〸-〺〻㐀-䶵一-鿃豈-鶴侮-頻並-龎]', re.UNICODE)
+def display_len1(s):            # The dirty version
+    original_length = len(s)
+    nonchinese_length = RE.sub('', s)
+    return original * 2 - nonchinese
 
 def get_email_and_password():
     parser = ConfigParser()
@@ -96,7 +106,6 @@ class CursesUI(object):
         locale.setlocale(locale.LC_CTYPE, '')
         global code
         code = locale.getpreferredencoding()
-        print 'code: ', code
         ## initialize
         self.stdscr = stdscr = curses.initscr()
         ## use color
@@ -170,7 +179,6 @@ class CursesUI(object):
         else:
             right_win.addstr(14, 29, "删除红心(d)")
     def set_progress(self, position_int):
-        lyric_length = 40
         length = position_int * 40 / 1000000000 / self.current_song_info['length']
         self.right_win.addstr(10, 3, '-' * length + '>' + ' ' * (40 - length))
         position_text = self.convert_seconds(position_int, 1000000000)
@@ -178,7 +186,8 @@ class CursesUI(object):
         if self.has_lyric:
             lyric_line = self.get_lyric_line(position_text)
             self.right_win.addstr(7, 2, '%', curses.color_pair(13))
-            self.right_win.addstr(7, 4, lyric_line + ' ' * (lyric_length - len(lyric_line)))
+            self.right_win.addstr(7, 4, lyric_line +
+                                  ' ' * (LYRIC_LENGTH - len(lyric_line)))
         self.right_win.refresh()
         return length == 40
         
@@ -357,8 +366,16 @@ class CursesUI(object):
     def get_lyric_line(self, position_text):
         for (idx, line) in enumerate(self.lyrics):
             if line[0] > position_text:
-                return self.lyrics[idx - 1][1][:50] # Only part of the lyric if too long
-        return ''
+                return self.lyrics[idx - 1][1][:LYRIC_LENGTH] # Only part of the lyric if too long
+        return '' #self.lyric[-1][1][:LYRIC_LENGTH] Bugs???
+    
+    def send_notification(self, song_info):
+        pynotify.init(song_info['title'])
+        n = pynotify.Notification(title, description, image)
+        n.set_hint_string('x-canonical-append','')
+        n.show()
+
+        
 class LyricDownloader(object):
     def __init__(self):
         self.proxy = None
