@@ -1,2 +1,64 @@
 * DoubanFM4Nerd
-TODO
+** Overview
+这是基于python编写的命令行版的豆瓣FM，在Ubuntu 12.10 x64上测试运行。
+
+这份代码参考了很多别人的已有代码和资料，包括：
+- 控制台UI：基于https://github.com/panxiuqing/doubanfm.py 而写，重构了已有代码，
+  修改了一些显示细节，加上一些新的元素等。
+- 豆瓣电台网络部分：文档资料参考[[https://gitcafe.com/zonyitoo/doubanfm-qt][doubanfm-qt]] 的作者写的
+  http://zonyitoo.github.com/blog/2013/01/22/doubanfmbo-fang-qi-kai-fa-shou-ji/，
+  里面对如何与豆瓣FM进行交互（类似API）做了比较详细的介绍。我还参考了doubanfm-qt
+  的C++代码了解细节。实际python实现参考https://github.com/wujianguo/doubanFM/，
+  并按照doubanfm-qt的代码进行了少量修改。
+- 音乐播放器：采用gstreamer作为播放器后端，这部分参考[[http://pygstdocs.berlios.de/][PyGST]] 的官方实例。
+
+注：以上有些作者没有标明代码的版权协议，我这里也没有给出代码遵从的协议。如有任何
+关于代码的问题，请与我联系。
+
+** Requirement
+- [[http://python-requests.org/][Requests]] 。建议用pip安装。
+- Gstreamer。有些发行版默认没装必须的插件，无法播放mp3。可以通过gst-launch-0.10
+  playbin2 uri=file://path/to/mp3 测试能否正常播放。如提示缺少插件，Ubuntu的解决
+  办法为：
+  : sudo aptitude install gstreamer0.10-plugins-ugly
+
+** Functions
+- 支持豆瓣FM网络版的大部分功能，包括选电台，播放，暂停，下一首，登陆，加红心，取
+  消红心，显示播放进度等
+- 支持自动下载歌词并显示，采用歌词迷的API，见http://api.geci.me/en/latest/index.html
+
+** Problems
+- 多线程模型采用了一个非常dirty的解决方案。curses库不是thread-safe的，但是显示歌
+  曲进度和歌词需要修改curses界面，网上没有找到现成的解决方案。目前采用的方法是在
+  while循环中给select设置超时，然后在接下来的部分更新歌曲进度和歌词，再判断是否可
+  读，做用户输入处理，这样所有的界面处理都放到了主线程中。可能在别人已有的代码中
+  有更加优雅的解决方案。
+- 下载歌词也在主线程中进行，会有卡顿现象。
+- 程序的错误处理比较粗暴简单，因此不能处理网络情况比较差导致的许多问题。
+- 按照PyGST官方教程，采用playbin2进行播放，注册了消息处理的回调函数，但是歌曲播送
+  完后不发送EOS(End Of Stream)消息。目前采用比较dirty的解决方法是用
+  query_position来判断音乐是否播放结束。
+- 红心兆赫不在get_channel_list函数返回的列表中，在豆瓣FM的网页版通过web console监
+  视网络请求可以看到红心兆赫的实际channel_id为-3，因此在代码中我手动加入这个
+  channel。另外，从web console可以看到豆瓣FM的网页版似乎是通过
+  http://douban.fm/j/mine/playlist 进行交互的，
+  https://github.com/zhendi/DoubanFM-CLI/ 也是采用同一套API。（我采用
+  http://www.douban.com/j/app/radio）
+  
+** TODO 
+*** [#A] 加入Linux的桌面通知
+*** [#A] 显示完整的频道列表
+*** [#A] 歌词采用异步方式下载
+*** [#B] 改善配置系统，加入代理等功能设置
+*** [#B] 增加下载歌曲功能
+*** [#B] 后台采用Pipeline替代playbin2，测试能否修正playbin2不发送EOS的问题
+*** [#B] 加入播放历史功能，可以提供播放历史列表和前一首，单曲循环等功能
+*** [#C] 显示manual
+*** [#C] 改善Console输出，加强Console窗口功能，可以考虑加入类似Vim的命令功能。
+*** 重构代码，目前由于写得比较仓促，有无用冗余和风格奇怪的代码。
+
+** Acknowledgement
+- https://github.com/panxiuqing/doubanfm.py
+- http://zonyitoo.github.com/blog/2013/01/22/doubanfmbo-fang-qi-kai-fa-shou-ji/
+- https://gitcafe.com/zonyitoo/doubanfm-qt
+- https://github.com/wujianguo/doubanFM/
