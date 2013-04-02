@@ -1,4 +1,5 @@
-* DoubanFM4Nerd
+* NerdishDoubanFM
+A nerd-ish command line Douban FM client written in Python.
 ** Overview
 这是基于python编写的命令行版的豆瓣FM，在Ubuntu 12.10 x64上测试运行。
 
