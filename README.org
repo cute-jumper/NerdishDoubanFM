@@ -29,16 +29,14 @@
   http://api.geci.me/en/latest/index.html
 - 支持代理功能。在程序创建了.config/settings.conf配置文件后，可以在[SYSTEM]
   section中按以下格式添加代理设置：
-  ```
-  [SYSTEM]
-  proxies = http 127.0.0.1:8087, protocol address
-  ```
+  : [SYSTEM]
+  : proxies = {"http": "127.0.0.1:8087", "https": "a.b.c.d"}
+
 - 支持Linux的桌面通知。默认不打开，配置方法和代理类似，在.config/settings.conf中
   添加：
-  ```
-  [SYSTEM]
-  notification = true 
-  ```
+  : [SYSTEM]
+  : notification = true 
+
 - 默认在歌曲播放时下载歌曲到本地，可以查看.cache/.song目录。播放相同歌曲时优先选
   择本地缓存，不保存播放过程中跳过的歌曲。
 

@@ -87,7 +87,7 @@ if os.path.isfile(app_settings_file):
         user_email = parser.get('USER', 'email')
         user_password = parser.get('USER', 'password')
         if parser.has_option('SYSTEM', 'proxies'):
-            system_proxies = dict(map(lambda x: x.strip().split(' '), parser.get('SYSTEM', 'proxies').split(',')))
+            system_proxies = eval(parser.get('SYSTEM', 'proxies'))
         if parser.has_option('SYSTEM', 'notification'):
             system_notification = parser.getboolean('SYSTEM', 'notification')
     except:
