@@ -41,7 +41,7 @@
 配置文件是Settings.py，注意不要修改系统设置部分，修改用户设置即可。配置方法示例如下：
 : user_email = 'foo@bar.com'
 : user_password = 'secret'
-: system_proxies = '{"http": "127.0.0.1:8087", "https": "a.b.c.d"}
+: system_proxies = {"http": "127.0.0.1:8087", "https": "a.b.c.d"}
 : system_notification = True
 
 如果配置了用户名密码，程序在启动时将不再提示输入用户名和密码。注意代理的格式是
