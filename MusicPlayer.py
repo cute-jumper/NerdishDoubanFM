@@ -4,6 +4,9 @@
 # Date: <2013-04-02 Tue>
 
 import gst
+import os
+
+from Utils import make_local_filename
 
 class MusicPlayer(object):
     def __init__(self):
@@ -24,7 +27,7 @@ class MusicPlayer(object):
     def set_play_state(self, player, state):
         self.play_state = state
         player.set_state(state)
-        
+
     def get_play_state(self):
         return self.play_state
 

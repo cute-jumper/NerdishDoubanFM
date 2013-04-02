@@ -7,24 +7,34 @@ import curses
 import pynotify
 import locale
 import sys
+import os
+from collections import deque
 from select import select
 
 from DoubanFM import DoubanFM
 from DownloadManager import DownloadManager
+from MusicPlayer import MusicPlayer
+from Utils import make_local_filename
+
+MAX_CHANNEL = 7
+LYRIC_LENGTH = 40
 
 class CursesUI(object):
-    def __init__(self, proxies):
+    def __init__(self, user_email, user_password, system_proxies, system_notification):
         self.current_channel = 1
         self.channel_list = None
-        self.dbfm = DoubanFM(proxies)
+        self.dbfm = DoubanFM(system_proxies)
         self.has_lyric = False
-        self.download_manager = DownloadManager(proxies)
+        self.download_manager = DownloadManager(system_proxies)
         self.current_song_info = None
         self.setup_main_win()
         self.setup_left_win()
         self.setup_right_win()
         self.setup_console_win()
+        self.user_email = user_email
+        self.user_password = user_password
         self.enable_notification = system_notification
+        self.console_log = deque()
     def setup_main_win(self):
         #locale
         locale.setlocale(locale.LC_CTYPE, '')
@@ -112,6 +122,8 @@ class CursesUI(object):
             self.right_win.addstr(7, 2, '%', curses.color_pair(13))
             self.right_win.addstr(7, 4, lyric_line +
                                   ' ' * (LYRIC_LENGTH - len(lyric_line)))
+        else:
+            self.right_win.addstr(7, 2, ' ' * (LYRIC_LENGTH + 2))
         self.right_win.refresh()
         return length == 40
         
@@ -121,18 +133,14 @@ class CursesUI(object):
         self.console_win = console_win = curses.newwin(console_height, console_width, console_y, console_x)
         self.console_win_restore()
         console_win.refresh()
-        self.console_win_line = 0
         
-    def add_console_output(self, message, input_line = None):
-        line = self.console_win_line
-        if input_line != None:
-            line = input_line
-        else:
-            self.console_win_line += 1
-            if self.console_win_line > 5:
-                self.console_win_line = 0
-        self.console_win.addstr(2 + line, 2, (str(message)).encode(code))
-        self.console_win.clrtoeol()
+    def add_console_output(self, message):
+        self.console_log.append(message)
+        while len(self.console_log) > 5:
+            self.console_log.popleft()
+        for (idx, msg) in enumerate(reversed(self.console_log)):
+            self.console_win.addstr(2 + idx, 2, (str(msg)).encode(code))
+            self.console_win.clrtoeol()
         self.console_win_restore()
         self.console_win.refresh()
         
@@ -211,89 +219,94 @@ class CursesUI(object):
         #     self.right_win.addstr(11, 34, "00:00/%s" %duration_text)
         #     self.right_win.refresh()
         #     break
-        while True:
-            self.right_win.refresh()
-            self.left_win.refresh()
-            rlist, _, _ = select([sys.stdin], [], [], 1)
-            if player_started:
-                try:
-                    position_int = p.position
-                    if self.set_progress(position_int):
-                        p.stop_song()
-                        self.play_next_song(p)
-                except:
-                    continue
-            if not rlist:
-                continue
-            ch = self.left_win.getch()
-            cursor_y, cursor_x = self.left_win.getyx()
-            if ch == ord('c'):
-                if cursor_x != 2:
-                    self.left_win.move(2, 2)
-                    continue
+        try:
+            while True:
+                self.right_win.refresh()
+                self.left_win.refresh()
+                rlist, _, _ = select([sys.stdin], [], [], 1)
                 if player_started:
+                    try:
+                        position_int = p.position
+                        if self.set_progress(position_int):
+                            p.stop_song()
+                            self.play_next_song(p)
+                    except:
+                        continue
+                if not rlist:
+                    continue
+                ch = self.left_win.getch()
+                cursor_y, cursor_x = self.left_win.getyx()
+                if ch == ord('c'):
+                    if cursor_x != 2:
+                        self.left_win.move(2, 2)
+                        continue
+                    if player_started:
+                        self.stop_and_remove(p, self.current_song_info['url'])
+                    current_channel = self.get_channel_to_play(cursor_y)
+                    if current_channel == None:
+                        continue
+                    self.current_channel = current_channel
+                    player_started = True
+                    self.dbfm.change_channel(self.current_channel)
+                    self.play_next_song(p)
+                    self.left_win.move(cursor_y, cursor_x)
+                elif ch == ord('n'):
+                    if not player_started:
+                        continue
                     self.stop_and_remove(p, self.current_song_info['url'])
-                current_channel = self.get_channel_to_play(cursor_y)
-                if current_channel == None:
-                    continue
-                self.current_channel = current_channel
-                player_started = True
-                self.dbfm.change_channel(self.current_channel)
-                self.play_next_song(p)
-                self.left_win.move(cursor_y, cursor_x)
-            elif ch == ord('n'):
-                if not player_started:
-                    continue
-                self.stop_and_remove(p, self.current_song_info['url'])
-                self.play_next_song(p)
-            elif ch == ord('r'):
-                if not self.dbfm.is_logined():
-                    self.add_console_output('Please log in first! Press "l".')
-                    continue
-                if self.current_song_info['like'] == 1:
-                    self.add_console_output('Already hearted!')
-                    continue
-                if self.dbfm.rate_song(self.current_channel['channel_id'], True)['r'] == 0:
-                    self.add_console_output("Hearted %s successfully!" %self.current_song_info['title'])
-                    self.current_song_info['like'] = 1
-                    self.show_song_info(self.current_song_info)
-                else:
-                    self.add_console_output("Hearted %s failure!" %self.current_song_info['title'])
-            elif ch == ord('u'):
-                if not self.dbfm.is_logined():
-                    self.add_console_output('Please log in first! Press "l".')
-                    continue
-                if self.current_song_info['like'] == 0:
-                    self.add_console_output("Haven't hearted yet!")
-                    continue
-                if self.dbfm.rate_song(self.current_channel['channel_id'], False)['r'] == 0:
-                    self.add_console_output("Unhearted %s successfully!" %self.current_song_info['title'])
-                    self.current_song_info['like'] = 0
-                    self.show_song_info(self.current_song_info)
-                else:
-                    self.add_console_output("Unhearted %s failure!" %self.current_song_info['title'])
+                    self.play_next_song(p)
+                elif ch == ord('r'):
+                    if not self.dbfm.is_logined():
+                        self.add_console_output('Please log in first! Press "l".')
+                        continue
+                    if self.current_song_info['like'] == 1:
+                        self.add_console_output('Already hearted!')
+                        continue
+                    if self.dbfm.rate_song(self.current_channel['channel_id'], True)['r'] == 0:
+                        self.add_console_output("Hearted %s successfully!" %self.current_song_info['title'])
+                        self.current_song_info['like'] = 1
+                        self.show_song_info(self.current_song_info)
+                    else:
+                        self.add_console_output("Hearted %s failure!" %self.current_song_info['title'])
+                elif ch == ord('u'):
+                    if not self.dbfm.is_logined():
+                        self.add_console_output('Please log in first! Press "l".')
+                        continue
+                    if self.current_song_info['like'] == 0:
+                        self.add_console_output("Haven't hearted yet!")
+                        continue
+                    if self.dbfm.rate_song(self.current_channel['channel_id'], False)['r'] == 0:
+                        self.add_console_output("Unhearted %s successfully!" %self.current_song_info['title'])
+                        self.current_song_info['like'] = 0
+                        self.show_song_info(self.current_song_info)
+                    else:
+                        self.add_console_output("Unhearted %s failure!" %self.current_song_info['title'])
 
-            elif ch == ord('j') or ch == curses.KEY_DOWN:
-                if cursor_y < (MAX_CHANNEL + 2 )* 2:
-                    self.left_win.move(cursor_y + 2, 2)
+                elif ch == ord('j') or ch == curses.KEY_DOWN:
+                    if cursor_y < (MAX_CHANNEL + 2 )* 2:
+                        self.left_win.move(cursor_y + 2, 2)
+                    else:
+                        continue
+                elif ch == ord('k') or ch == curses.KEY_UP:
+                    if cursor_y > 2:
+                        self.left_win.move(cursor_y - 2, 2)
+                    else:
+                        continue
+                elif ch == ord('p'):
+                    p.toggle_paused_song()
+                elif ch == ord('l'):
+                    if self.dbfm.login(self.user_email, self.user_password):
+                        self.add_console_output("Log in successful!")
+                    else:
+                        self.add_console_output('Log in failure!')
                 else:
-                    continue
-            elif ch == ord('k') or ch == curses.KEY_UP:
-                if cursor_y > 2:
-                    self.left_win.move(cursor_y - 2, 2)
-                else:
-                    continue
-            elif ch == ord('p'):
-                p.toggle_paused_song()
-            elif ch == ord('l'):
-                if self.dbfm.login(user_email, user_password):
-                    self.add_console_output("Log in successful!")
-                else:
-                    self.add_console_output('Log in failure!')
-            else:
+                    self.stop_and_remove(p, self.current_song_info['url'])
+                    break
+        except:
+            if player_started and self.current_song_info != None:
                 self.stop_and_remove(p, self.current_song_info['url'])
-                break
-        self.end_curses_app()
+        finally:
+            self.end_curses_app()
         
     def get_lyric_line(self, position_text):
         for (idx, line) in enumerate(self.lyrics):

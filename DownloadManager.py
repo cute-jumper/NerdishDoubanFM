@@ -4,6 +4,11 @@
 # Date: <2013-04-02 Tue>
 
 import requests
+import os
+
+from Settings import app_lrc_cache_dir, app_img_cache_dir, app_song_download_dir
+
+LYRIC_API_URL_TEMPLATE = 'http://geci.me/api/lyric/{title}/{artist}'
 
 class DownloadManager(object):
     def __init__(self, proxies):
@@ -12,7 +17,7 @@ class DownloadManager(object):
         filename = os.path.join(app_lrc_cache_dir, '%s_%s.lrc' %(song_info['title'], song_info['artist']))
         if not os.path.isfile(filename):
             try:
-                ret = requests.get(lyric_api_url_template.format(title=song_info['title'], artist=song_info['artist']), proxies=self.proxies).json()
+                ret = requests.get(LYRIC_API_URL_TEMPLATE.format(title=song_info['title'], artist=song_info['artist']), proxies=self.proxies).json()
             except:
                 return None
             if ret['count'] == 0:
