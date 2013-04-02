@@ -17,39 +17,42 @@
 
 ** Requirement
 - [[http://python-requests.org/][Requests]] 。建议用pip安装。
-- Gstreamer。有些发行版默认没装必须的插件，无法播放mp3。可以通过gst-launch-0.10
+- [[http://gstreamer.freedesktop.org/][Gstreamer]] 。有些发行版默认没装必须的插件，无法播放mp3。可以通过gst-launch-0.10
   playbin2 uri=file://path/to/mp3 测试能否正常播放。如提示缺少插件，Ubuntu的解决
   办法为：
   : sudo aptitude install gstreamer0.10-plugins-ugly
 
 ** Functions
-- 支持豆瓣FM网络版的大部分功能，包括选电台，播放，暂停，下一首，登陆，加红心，取
+- 支持豆瓣FM网络版的大部分功能，包括选电台，播放，暂停，下一首，登录，加红心，取
   消红心，显示播放进度等
 - 支持自动下载歌词并显示，采用歌词迷的API，见
   http://api.geci.me/en/latest/index.html
-- 支持代理功能。在程序创建了.config/settings.conf配置文件后，可以在[SYSTEM]
-  section中按以下格式添加代理设置：
-  : [SYSTEM]
-  : proxies = {"http": "127.0.0.1:8087", "https": "a.b.c.d"}
-
-- 支持Linux的桌面通知。默认不打开，配置方法和代理类似，在.config/settings.conf中
-  添加：
-  : [SYSTEM]
-  : notification = true 
-
+- 支持代理功能。
+- 支持Linux的桌面通知，默认不打开。
 - 默认在歌曲播放时下载歌曲到本地，可以查看.cache/.song目录。播放相同歌曲时优先选
   择本地缓存，不保存播放过程中跳过的歌曲。
 
 ** Usage
 在终端中运行
-: python DoubanFM4Nerd.py
+: python NerdishDoubanFM.py
+
+输入正确的用户名、密码以便登录。如果不需要登录功能，直接回车即可。
+
+配置文件是Settings.py，注意不要修改系统设置部分，修改用户设置即可。配置方法示例如下：
+: user_email = 'foo@bar.com'
+: user_password = 'secret'
+: system_proxies = '{"http": "127.0.0.1:8087", "https": "a.b.c.d"}
+: system_notification = True
+
+如果配置了用户名密码，程序在启动时将不再提示输入用户名和密码。注意代理的格式是
+Python中的字典。
 
 目前尚未完成帮助部分。按键功能说明如下：
 - "j,k,Up,Down"：上下移动光标选择频道，j、k键是Vim习惯
 - "c"：播放该频道
 - "n"：下一首
 - "p"：暂停/播放
-- "l"：用户登陆
+- "l"：用户登录
 - "r"：标为喜欢
 - "u"：取消喜欢
 - "q"：退出
@@ -59,8 +62,10 @@
   曲进度和歌词需要修改curses界面，网上没有找到现成的解决方案。目前采用的方法是在
   while循环中给select设置超时，然后在接下来的部分更新歌曲进度和歌词，再判断是否可
   读，做用户输入处理，这样所有的界面处理都放到了主线程中。可能在别人已有的代码中
-  有更加优雅的解决方案。
-- 下载歌词也在主线程中进行，会有卡顿现象。
+  有更加优雅的解决方案。下载歌词也在主线程中进行，会有卡顿现象。
+- 中文歌词的显示有一定的问题，因为len不能正常计算出正常的显示长度。理论上可以用
+  unicodedata的east_asian_width计算实际显示长度，无法在curses节目中使用，会有问题，
+  同时另外一种正则表达式来计算的办法也不行。尚未明白其中原因。
 - 程序的错误处理比较粗暴简单，因此不能处理网络情况比较差导致的许多问题。
 - 按照PyGST官方教程，采用playbin2进行播放，注册了消息处理的回调函数，但是歌曲播送
   完后不发送EOS(End Of Stream)消息。目前采用比较dirty的解决方法是用
@@ -75,8 +80,7 @@
   https://github.com/zhendi/DoubanFM-CLI/ 也是采用同一套API。（我采用的是
   http://www.douban.com/j/app/radio）
 - 没有对广告进行处理
-- 好吧，bugs太多，经常卡死，Ctrl+C强行退出后重启便好。建议异常退出后先在终端执行
-  reset命令，不然可能导致终端显示异常。
+- 好吧，bugs太多，经常卡死，Ctrl+C强行退出后重启便好。
   
 ** TODO TODO
 - <del>加入Linux的桌面通知</del>
