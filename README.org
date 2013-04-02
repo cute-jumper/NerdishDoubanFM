@@ -66,11 +66,10 @@
 - 程序的错误处理比较粗暴简单，因此不能处理网络情况比较差导致的许多问题。
 - 按照PyGST官方教程，采用playbin2进行播放，注册了消息处理的回调函数，但是歌曲播送
   完后不发送EOS(End Of Stream)消息。目前采用比较dirty的解决方法是用
-  query_position来判断音乐是否播放结束。\\
-  *update*: 后台已改成使用两个不同的播放器：playbin2用于播放本地音乐，自己组装的
-  播放器（souphttpsrc name=httpsrc ! tee name=t ! queue ! filesink name=filedest
-  t. ! queue ! mad ! audioconvert ! alsasink）可以通过http协议播放音乐并自动下载
-  到本地。
+  query_position来判断音乐是否播放结束。(*update*: 后台已改成使用两个不同的播放器：
+  playbin2用于播放本地音乐，自己组装的播放器（souphttpsrc name=httpsrc ! tee
+  name=t ! queue ! filesink name=filedest t. ! queue ! mad ! audioconvert !
+  alsasink）可以通过http协议播放音乐并自动下载到本地。)
 - 红心兆赫不在get_channel_list函数返回的列表中，在豆瓣FM的网页版通过web console监
   视网络请求可以看到红心兆赫的实际channel_id为-3，因此在代码中我手动加入这个
   channel。另外，从web console可以看到豆瓣FM的网页版似乎是通过
