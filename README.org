@@ -27,6 +27,20 @@
   消红心，显示播放进度等
 - 支持自动下载歌词并显示，采用歌词迷的API，见
   http://api.geci.me/en/latest/index.html
+- 支持代理功能。在程序创建了.config/settings.conf配置文件后，可以在[SYSTEM]
+  section中按以下格式添加代理设置：
+  ```
+  [SYSTEM]
+  proxies = http 127.0.0.1:8087, protocol address
+  ```
+- 支持Linux的桌面通知。默认不打开，配置方法和代理类似，在.config/settings.conf中
+  添加：
+  ```
+  [SYSTEM]
+  notification = true 
+  ```
+- 默认在歌曲播放时下载歌曲到本地，可以查看.cache/.song目录。播放相同歌曲时优先选
+  择本地缓存，不保存播放过程中跳过的歌曲。
 
 ** Usage
 在终端中运行
@@ -52,26 +66,34 @@
 - 程序的错误处理比较粗暴简单，因此不能处理网络情况比较差导致的许多问题。
 - 按照PyGST官方教程，采用playbin2进行播放，注册了消息处理的回调函数，但是歌曲播送
   完后不发送EOS(End Of Stream)消息。目前采用比较dirty的解决方法是用
-  query_position来判断音乐是否播放结束。
+  query_position来判断音乐是否播放结束。\\
+  *update*: 后台已改成使用两个不同的播放器：playbin2用于播放本地音乐，自己组装的
+  播放器（souphttpsrc name=httpsrc ! tee name=t ! queue ! filesink name=filedest
+  t. ! queue ! mad ! audioconvert ! alsasink）可以通过http协议播放音乐并自动下载
+  到本地。
 - 红心兆赫不在get_channel_list函数返回的列表中，在豆瓣FM的网页版通过web console监
   视网络请求可以看到红心兆赫的实际channel_id为-3，因此在代码中我手动加入这个
   channel。另外，从web console可以看到豆瓣FM的网页版似乎是通过
   http://douban.fm/j/mine/playlist 进行交互的，
-  https://github.com/zhendi/DoubanFM-CLI/ 也是采用同一套API。（我采用
+  https://github.com/zhendi/DoubanFM-CLI/ 也是采用同一套API。（我采用的是
   http://www.douban.com/j/app/radio）
+- 没有对广告进行处理
+- 好吧，bugs太多，经常卡死，Ctrl+C强行退出后重启便好。建议异常退出后先在终端执行
+  reset命令，不然可能导致终端显示异常。
   
 ** TODO TODO
-- 加入Linux的桌面通知
+- <del>加入Linux的桌面通知</del>
+- <del>改善配置系统，加入代理等功能设置</del>
+- <del>增加下载歌曲功能</del>
+- <del>后台采用Pipeline替代playbin2</del>，测试能否修正playbin2不发送EOS的问题
+- 处理广告的问题
 - 显示完整的频道列表
+- 加入history
 - 歌词采用异步方式下载
-- 改善配置系统，加入代理等功能设置
-- 增加下载歌曲功能
-- 后台采用Pipeline替代playbin2，测试能否修正playbin2不发送EOS的问题
 - 加入播放历史功能，可以提供播放历史列表和前一首，单曲循环等功能
 - 显示manual
 - 改善Console输出，加强Console窗口功能，可以考虑加入类似Vim的命令功能。
 - Emacs客户端
-- 加入history
 - 重构代码，目前由于写得比较仓促，有无用冗余和风格奇怪的代码。
 
 ** Acknowledgement
@@ -79,3 +101,4 @@
 - http://zonyitoo.github.com/blog/2013/01/22/doubanfmbo-fang-qi-kai-fa-shou-ji/
 - https://gitcafe.com/zonyitoo/doubanfm-qt
 - https://github.com/wujianguo/doubanFM/
+- http://pygstdocs.berlios.de/

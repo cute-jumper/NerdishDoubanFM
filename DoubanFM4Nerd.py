@@ -18,9 +18,18 @@ import unicodedata
 import re
 
 app_dir = os.path.dirname(os.path.abspath(__file__))
-app_img_cache_dir = os.path.join(app_dir, '.img')
-app_lrc_cache_dir = os.path.join(app_dir, '.lrc')
-app_song_download_dir = os.path.join(app_dir, 'download')
+
+app_cache_dir = os.path.join(app_dir, '.cache')
+app_img_cache_dir = os.path.join(app_cache_dir, '.img')
+app_lrc_cache_dir = os.path.join(app_cache_dir, '.lrc')
+app_song_download_dir = os.path.join(app_cache_dir, '.song')
+
+app_settings_dir = os.path.join(app_dir, '.config')
+app_settings_file = os.path.join(app_settings_dir, 'settings.conf')
+
+if not os.path.exists(app_cache_dir):
+    os.mkdir(app_cache_dir)
+    print '[Message]: mkdir', app_cache_dir
 if not os.path.exists(app_img_cache_dir):
     os.mkdir(app_img_cache_dir)
     print '[Message]: mkdir', app_img_cache_dir
@@ -30,7 +39,10 @@ if not os.path.exists(app_lrc_cache_dir):
 if not os.path.exists(app_song_download_dir):
     os.mkdir(app_song_download_dir)
     print '[Message]: mkdir', app_song_download_dir
-app_setting_file = os.path.join(app_dir, '.user.conf')
+if not os.path.exists(app_settings_dir):
+    os.mkdir(app_settings_dir)
+    print '[Message]: mkdir', app_settings_dir
+
 app_name = 'radio_desktop_win'
 version = 100
 app_info = {'app_name': app_name, 'version': version}
@@ -50,44 +62,39 @@ def display_len1(s):            # The dirty version
     nonchinese_length = RE.sub('', s)
     return original * 2 - nonchinese
 
-def get_email_and_password():
-    parser = ConfigParser()
-    if os.path.isfile(app_setting_file):
-        parser.read(app_setting_file)
-        return parser.get('user info', 'email'), parser.get('user info', 'password')
-    else:
-        parser.add_section('user info')
-        email = raw_input('Email: ')
-        password = getpass('Password: ')
-        parser.set('user info', 'email', email)
-        parser.set('user info', 'password', password)
-        answer = raw_input('save username and password?[Y/N]')
-        if answer == 'Y' or answer == 'y':
-            with open(app_setting_file, 'wb') as fout:
-                parser.write(fout)
-        return email, password
-                
-user_email, user_password = get_email_and_password()
 
-# j = json.loads(urllib2.urlopen('http://www.douban.com/j/app/radio/channels').read())
-# print json.dumps(j, indent=4)
-#print urllib2.urlopen('http://www.douban.com/j/app/radio/people').read()
-# payload={'email':email,'password':passwd,'app_name':'radio_desktop_win','version':100}
-# url = 'http://www.douban.com/j/app/login'
-# r = requests.post(url, data=payload)
-# data = r.json()
-# print json.dumps(data, indent=4)
-# exit()
-# if data['err']!='ok':
-#     print('login failed')
-# else:
-#     print data['user_id']
-#     print data['expire']
-#     print data['token']
-#     print 'Successfully log in!'
-#     print data
+parser = ConfigParser()
+if not os.path.isfile(app_settings_file):
+    answer = raw_input('Can not find %s, create one[Y/N]: ' %app_settings_file)
+    if answer == 'y' or answer == 'Y':
+        with open(app_settings_file, 'w') as fout:
+            parser.add_section('USER')
+            parser.add_section('SYSTEM')
+            email = raw_input('Email: ')
+            password = getpass('Password: ')
+            parser.set('USER', 'email', email)
+            parser.set('USER', 'password', password)
+            parser.write(fout)
+        print '[Message] Settings saved at ' + app_settings_file
+
+user_email, user_password = '', ''
+system_proxies = None
+system_notification = False
+
+if os.path.isfile(app_settings_file):
+    parser.read(app_settings_file)
+    try:
+        user_email = parser.get('USER', 'email')
+        user_password = parser.get('USER', 'password')
+        if parser.has_option('SYSTEM', 'proxies'):
+            system_proxies = dict(map(lambda x: x.strip().split(' '), parser.get('SYSTEM', 'proxies').split(',')))
+        if parser.has_option('SYSTEM', 'notification'):
+            system_notification = parser.getboolean('SYSTEM', 'notification')
+    except:
+        print '[Error] Abnormal setting file. Please check ' + app_settings_file
+        exit(1)
+
 # ncurses UI code
-
 class CursesUI(object):
     def __init__(self):
         self.current_channel = 1
@@ -100,7 +107,7 @@ class CursesUI(object):
         self.setup_left_win()
         self.setup_right_win()
         self.setup_console_win()
-        self.enable_notification = True
+        self.enable_notification = system_notification
     def setup_main_win(self):
         #locale
         locale.setlocale(locale.LC_CTYPE, '')
@@ -267,7 +274,12 @@ class CursesUI(object):
             self.add_console_output('Lyric downloaded.')
         if self.enable_notification:
             self.send_notification(self.current_song_info)
-        p.play_song(self.current_song_info['url'])
+        p.play_song(self.current_song_info)
+        
+    def stop_and_remove(self, player, song_info):
+        player.stop_song()
+        if player.is_http_player():
+            os.remove(make_local_filename(self.current_song_info))
         
     def run(self):
         self.left_win.move(2, 2)
@@ -303,7 +315,7 @@ class CursesUI(object):
                     self.left_win.move(2, 2)
                     continue
                 if player_started:
-                    p.stop_song()
+                    self.stop_and_remove(p, self.current_song_info['url'])
                 current_channel = self.get_channel_to_play(cursor_y)
                 if current_channel == None:
                     continue
@@ -315,7 +327,7 @@ class CursesUI(object):
             elif ch == ord('n'):
                 if not player_started:
                     continue
-                p.stop_song()
+                self.stop_and_remove(p, self.current_song_info['url'])
                 self.play_next_song(p)
             elif ch == ord('r'):
                 if not self.dbfm.is_logined():
@@ -362,6 +374,7 @@ class CursesUI(object):
                 else:
                     self.add_console_output('Log in failure!')
             else:
+                self.stop_and_remove(p, self.current_song_info['url'])
                 break
         self.end_curses_app()
         
@@ -380,18 +393,16 @@ class CursesUI(object):
         n.show()
         
 class DownloadManager(object):
-    def __init__(self):
-        self.proxy = None
     def download_lyric(self, song_info):
         filename = os.path.join(app_lrc_cache_dir, '%s_%s.lrc' %(song_info['title'], song_info['artist']))
         if not os.path.isfile(filename):
             try:
-                ret = requests.get(lyric_api_url_template.format(title=song_info['title'], artist=song_info['artist']), proxies=self.proxy).json()
+                ret = requests.get(lyric_api_url_template.format(title=song_info['title'], artist=song_info['artist']), proxies=system_proxies).json()
             except:
                 return None
             if ret['count'] == 0:
                 return None
-            lrc = requests.get(ret['result'][0]['lrc'], proxies=self.proxy)
+            lrc = requests.get(ret['result'][0]['lrc'], proxies=system_proxies)
             with open(filename, 'w') as fout:
                 fout.write(lrc.content)                
             lines = lrc.content.split('\n')
@@ -410,14 +421,14 @@ class DownloadManager(object):
         image_basename = image_url.split('/')[-1]
         image_abspath = os.path.join(app_img_cache_dir, image_basename)
         if not os.path.isfile(image_abspath):
-            r = requests.get(image_url, proxies=self.proxy)
+            r = requests.get(image_url, proxies=system_proxies)
             with open(image_abspath, 'wb') as fout:
                 fout.write(r.content)
         return image_abspath
     def download_song(self, song_info):
         filename = os.path.join(app_song_download_dir, '%s_%s.mp3' %(song_info['title'], song_info['artist']))
         if not os.path.isfile(filename):
-            r = requests.get(url, proxies=self.proxy)
+            r = requests.get(url, proxies=system_proxies)
             with open(filename, 'wb') as fout:
                 fout.write(r.content)
         return True
@@ -425,13 +436,16 @@ class DownloadManager(object):
 class MusicPlayer(object):
     def __init__(self):
         self.http_player = gst.parse_launch('souphttpsrc name=httpsrc ! tee name=t ! queue ! filesink name=filedest t. ! queue ! mad ! audioconvert ! alsasink')
+	bus = self.http_player.get_bus()
+	bus.add_signal_watch()
+	bus.connect("message", self.on_message_http)
         self.local_player = gst.element_factory_make('playbin2', 'local_player')
         fakesink = gst.element_factory_make("fakesink", "fakesink")
         self.local_player.set_property("video-sink", fakesink)
         self.current_player = None
-	# bus = self.player.get_bus()
-	# bus.add_signal_watch()
-	# bus.connect("message", self.on_message)
+	bus = self.local_player.get_bus()
+	bus.add_signal_watch()
+	bus.connect("message", self.on_message_local)
         self.play_state = None
         self.playmode = False
         
@@ -442,42 +456,57 @@ class MusicPlayer(object):
     def get_play_state(self):
         return self.play_state
 
-    def play_song(self, uri):
+    def play_song(self, song_info):
+        uri = song_info['url']
+        filepath = make_local_filename(song_info)
         self.set_play_state(self.http_player, gst.STATE_NULL)
         self.set_play_state(self.local_player, gst.STATE_NULL)
-        filepath = os.path.join(app_song_download_dir, uri.split('/')[-1])
-        if not os.path.isfile(filepath):
+        if os.path.isfile(filepath):
+            self.local_player.set_property('uri', 'file://' + filepath)
+            self.current_player = self.local_player
+            self.set_play_state(self.local_player, gst.STATE_PLAYING)
+        else:
             self.http_player.get_by_name('httpsrc').set_property('location', uri)
             self.http_player.get_by_name('filedest').set_property('location', filepath)
             self.current_player = self.http_player
             self.set_play_state(self.http_player, gst.STATE_PLAYING)
-        else:
-            self.local_player.set_property('uri', 'file://' + filepath)
-            self.current_player = self.local_player
-            self.set_play_state(self.local_player, gst.STATE_PLAYING)
         self.playmode = True
         
     def stop_song(self):
         self.set_play_state(self.http_player, gst.STATE_NULL)
         self.set_play_state(self.local_player, gst.STATE_NULL)
         self.playmode = False
-            
+        
+    def is_http_player(self):
+        return self.current_player == self.http_player
+        
     def toggle_paused_song(self):
         if self.get_play_state() == gst.STATE_PLAYING:
             self.set_play_state(self.current_player, gst.STATE_PAUSED)
         elif self.get_play_state() == gst.STATE_PAUSED:
             self.set_play_state(self.current_player, gst.STATE_PLAYING)
         
-    # def on_message(self, bus, message):
-    #     t = message.type
-    #     if t == gst.MESSAGE_EOS:
-    #         self.set_play_state(gst.STATE_NULL)
-    #         self.playmode = False
-    #     elif t == gst.MESSAGE_ERROR:
-    #         self.set_play_state(gst.STATE_NULL)
-    #         err, debug = message.parse_error()
-    #         print "Error: %s" % err, debug
-    #         self.playmode = False
+    def on_message_local(self, bus, message):
+        t = message.type
+        if t == gst.MESSAGE_EOS:
+            self.set_play_state(self.local_player, gst.STATE_NULL)
+            self.playmode = False
+        elif t == gst.MESSAGE_ERROR:
+            self.set_play_state(self.local_player, gst.STATE_NULL)
+            err, debug = message.parse_error()
+            print "Error: %s" % err, debug
+            self.playmode = False
+
+    def on_message_http(self, bus, message):
+        t = message.type
+        if t == gst.MESSAGE_EOS:
+            self.set_play_state(self.http_player, gst.STATE_NULL)
+            self.playmode = False
+        elif t == gst.MESSAGE_ERROR:
+            self.set_play_state(self.http_player, gst.STATE_NULL)
+            err, debug = message.parse_error()
+            print "Error: %s" % err, debug
+            self.playmode = False
             
     @property
     def duration(self):
@@ -494,26 +523,25 @@ class DoubanFM(object):
         self.playlist = None
         self.logined = False
         self.user_info = {'email': '', 'password': ''}
-        self.proxy = None
-    
+        
     def is_logined(self):
         return self.logined
     def login(self, email = None, password = None):
         if self.logined:
             return True
         if not self.user_info['email']:
-            self.user_info.update({'email': email if email else raw_input('Email: ')})
+            self.user_info.update({'email': email if email != None else raw_input('Email: ')})
         if not self.user_info['password']:
-            self.user_info.update({'password': password if password else getpass('Password: ')})
+            self.user_info.update({'password': password if password != None else getpass('Password: ')})
         payload = dict(self.user_info.items() + app_info.items())
-        data = requests.post(douban_fm_login_url, data=payload, proxies=self.proxy).json()
+        data = requests.post(douban_fm_login_url, data=payload, proxies=system_proxies).json()
         if data['err']!='ok':
             return False
         self.login_info = data
         self.logined = True
         return True
     def get_json_from_api(self, payload):
-        return requests.get(douban_fm_api_url, params=payload, proxies=self.proxy).json()
+        return requests.get(douban_fm_api_url, params=payload, proxies=system_proxies).json()
     def get_params(self, channel_id, report):
         params = dict(app_info.items() + [('type', report), ('channel', channel_id)])
         if report != 'n':
@@ -552,12 +580,15 @@ class DoubanFM(object):
         self.playlist = self.get_new_playlist(channel['channel_id'])
         
     def get_channel_list(self):
-        r = requests.get(douban_fm_channel_url, proxies=self.proxy)
+        r = requests.get(douban_fm_channel_url, proxies=system_proxies)
         return r.json()['channels']
 
         for channel in self.channels:
             print('%d\t%s\t%s'%(channel['channel_id'],channel['name'],channel['name_en']))
             
+def make_local_filename(song_info):
+    return os.path.join(app_song_download_dir, '%s_%s_%s'
+                        %(song_info['title'], song_info['artist'], song_info['url'].split('/')[-1]))
     
 if __name__ == '__main__':
     CursesUI().run()
