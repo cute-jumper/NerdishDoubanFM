@@ -8,8 +8,8 @@
 import os
 from Settings import app_song_download_dir
 def make_local_filename(song_info):
-    return os.path.join(app_song_download_dir, '%s_%s_%s'
-                        %(song_info['title'], song_info['artist'], song_info['url'].split('/')[-1]))
+    return os.path.join(app_song_download_dir, ('%s_%s_%s'
+                        %(song_info['title'], song_info['artist'], song_info['url'].split('/')[-1])).replace(' ', '-').replace(os.path.sep, ''))
 #############################################################
 
 #############################################################

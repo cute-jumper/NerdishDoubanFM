@@ -14,10 +14,10 @@ class DownloadManager(object):
     def __init__(self, proxies):
         self.proxies = proxies
     def download_lyric(self, song_info):
-        filename = os.path.join(app_lrc_cache_dir, '%s_%s.lrc' %(song_info['title'], song_info['artist']))
+        filename = os.path.join(app_lrc_cache_dir, '%s_%s.lrc' %(song_info['title'].replace(' ', '-').replace(os.path.sep, ''), song_info['artist'].replace(' ', '-').replace(os.path.sep, '')))
         if not os.path.isfile(filename):
             try:
-                ret = requests.get(LYRIC_API_URL_TEMPLATE.format(title=song_info['title'], artist=song_info['artist']), proxies=self.proxies).json()
+                ret = requests.get(LYRIC_API_URL_TEMPLATE.format(title=song_info['title'].replace(os.path.sep, ''), artist=song_info['artist'].replace(os.path.sep, '')), proxies=self.proxies).json()
             except:
                 return None
             if ret['count'] == 0:

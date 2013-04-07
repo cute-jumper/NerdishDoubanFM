@@ -7,9 +7,9 @@ A nerd-ish command line Douban FM client written in Python.
 - 控制台UI：基于https://github.com/panxiuqing/doubanfm.py 而写，重构了已有代码，
   修改了一些显示细节，加上一些新的元素等。
 - 豆瓣电台网络部分：文档资料参考[[https://gitcafe.com/zonyitoo/doubanfm-qt][doubanfm-qt]] 的作者写的
-  http://zonyitoo.github.com/blog/2013/01/22/doubanfmbo-fang-qi-kai-fa-shou-ji/，
+  http://zonyitoo.github.com/blog/2013/01/22/doubanfmbo-fang-qi-kai-fa-shou-ji/ ，
   里面对如何与豆瓣FM进行交互（类似API）做了比较详细的介绍。我还参考了doubanfm-qt
-  的C++代码了解细节。实际python实现参考https://github.com/wujianguo/doubanFM/，
+  的C++代码了解细节。实际python实现参考https://github.com/wujianguo/doubanFM/ ，
   并按照doubanfm-qt的代码进行了少量修改。
 - 音乐播放器：采用gstreamer作为播放器后端，这部分参考[[http://pygstdocs.berlios.de/][PyGST]] 的官方实例。
 

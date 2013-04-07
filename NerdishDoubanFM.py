@@ -8,6 +8,11 @@ from getpass import getpass
 
 if __name__ == '__main__':
     from Settings import *
+
+    if DEBUG:
+        import logging
+        logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
+
     dirs = [app_cache_dir, app_img_cache_dir, app_lrc_cache_dir, app_song_download_dir]
     for i in dirs:
         if not os.path.exists(i):

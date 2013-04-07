@@ -18,8 +18,8 @@ app_song_download_dir = os.path.join(app_cache_dir, '.song')
 user_email = ''
 user_password = ''
 system_proxies = None
-system_notification = True
+system_notification = False
 #########################################
 
 # Developer settings
-DEBUG = False
+DEBUG = True

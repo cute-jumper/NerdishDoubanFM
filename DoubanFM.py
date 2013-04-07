@@ -12,7 +12,11 @@ APP_INFO = {'app_name': app_name, 'version': version}
 DOUBAN_FM_LOGIN_URL = 'http://www.douban.com/j/app/login'
 DOUBAN_FM_CHANNEL_URL = 'http://www.douban.com/j/app/radio/channels'
 DOUBAN_FM_API_URL = 'http://www.douban.com/j/app/radio/people'
+LIST_LENGTH = 15
 
+from Settings import DEBUG
+if DEBUG:
+    import logging
 
 class DoubanFM(object):
     def __init__(self, proxies):
@@ -47,18 +51,24 @@ class DoubanFM(object):
     def get_params(self, channel_id, report):
         params = dict(APP_INFO.items() + [('type', report), ('channel', channel_id)])
         if report != 'n':
-            params.update({'sid': self.cur_song['sid']})#, 'h': self.history})
+            params.update({'sid': self.cur_song['sid'], 'h': '|' + ':s|'.join([i['sid'] for i in self.history]) + ':p'})
+            if DEBUG: logging.info('|' + ':p|'.join([i['title'] for i in self.history]) + ':p')
+            self.history = []
         if self.logined:
             params.update({i: self.login_info[i] for i in ['user_id', 'expire','token']})
         return params
 
     def get_new_playlist(self, channel_id):
         payload = self.get_params(channel_id, 'n')
-        return self.get_json_from_api(payload)['song']
+        ret = self.get_json_from_api(payload)['song']
+        if DEBUG: logging.info(' '.join([i['title'] for i in ret]))
+        return ret
     
     def get_next_playlist(self, channel_id):
         payload = self.get_params(channel_id, 'p')
-        return self.get_json_from_api(payload)['song']
+        ret = self.get_json_from_api(payload)['song']
+        if DEBUG: logging.info(' '.join([i['title'] for i in ret]))
+        return ret
     
     def rate_song(self, channel_id, to_rate):
         payload = self.get_params(channel_id, 'r' if to_rate else 'u')
@@ -76,7 +86,7 @@ class DoubanFM(object):
             self.playlist.extend(self.get_next_playlist(cid))
         song = self.playlist.pop(0)
         self.history.append(song)
-        if len(self.history) > 15:
+        while len(self.history) > LIST_LENGTH:
             self.history.pop(0)
         self.cur_song = song
         return song
