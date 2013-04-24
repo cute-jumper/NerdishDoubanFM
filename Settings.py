@@ -15,7 +15,7 @@ app_song_download_dir = os.path.join(app_cache_dir, '.song')
 
 #########################################
 # USER Settings. Change here.
-user_email = ''
+user_email = 'qjp-ch-mail@163.com'
 user_password = ''
 system_proxies = None
 system_notification = False

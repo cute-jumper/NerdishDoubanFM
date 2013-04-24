@@ -12,7 +12,8 @@ APP_INFO = {'app_name': app_name, 'version': version}
 DOUBAN_FM_LOGIN_URL = 'http://www.douban.com/j/app/login'
 DOUBAN_FM_CHANNEL_URL = 'http://www.douban.com/j/app/radio/channels'
 DOUBAN_FM_API_URL = 'http://www.douban.com/j/app/radio/people'
-LIST_LENGTH = 15
+LIST_LENGTH = 20
+EXCLUDE_TITLES = [u'暑期开发训练营']
 
 from Settings import DEBUG
 if DEBUG:
@@ -52,7 +53,6 @@ class DoubanFM(object):
         params = dict(APP_INFO.items() + [('type', report), ('channel', channel_id)])
         if report != 'n':
             params.update({'sid': self.cur_song['sid'], 'h': '|' + ':s|'.join([i['sid'] for i in self.history]) + ':p'})
-            if DEBUG: logging.info('|' + ':p|'.join([i['title'] for i in self.history]) + ':p')
             self.history = []
         if self.logined:
             params.update({i: self.login_info[i] for i in ['user_id', 'expire','token']})
@@ -80,15 +80,15 @@ class DoubanFM(object):
     
     def get_next_song_info(self):
         cid = self.current_channel['channel_id']
-        if not self.playlist:
-            self.playlist = self.get_new_playlist(cid)
-        elif len(self.playlist) < 2:
+        if len(self.playlist) < 2:
             self.playlist.extend(self.get_next_playlist(cid))
+        self.playlist = [song for song in self.playlist if song['title'] not in EXCLUDE_TITLES]
         song = self.playlist.pop(0)
         self.history.append(song)
         while len(self.history) > LIST_LENGTH:
             self.history.pop(0)
         self.cur_song = song
+        if DEBUG: logging.info(song)
         return song
     
     def change_channel(self, channel):

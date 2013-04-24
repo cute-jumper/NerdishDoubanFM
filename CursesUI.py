@@ -203,23 +203,24 @@ class CursesUI(object):
         
     def stop_and_remove(self, player, song_info):
         player.stop_song()
-        if player.is_http_player():
-            os.remove(make_local_filename(self.current_song_info))
+        local_filename = make_local_filename(self.current_song_info)
+        if player.is_http_player() and os.path.exists(local_filename):
+            os.remove(local_filename)
         
     def run(self):
-        self.left_win.move(2, 2)
-        p = MusicPlayer()
-        player_started = False
-        # while True:
-        #     time.sleep(0.2)
-        #     self.duration_int = p.duration
-        #     if self.duration_int == -1:
-        #         continue
-        #     duration_text = self.convert_ns(self.duration_int)
-        #     self.right_win.addstr(11, 34, "00:00/%s" %duration_text)
-        #     self.right_win.refresh()
-        #     break
         try:
+            self.left_win.move(2, 2)
+            p = MusicPlayer()
+            player_started = False
+            # while True:
+            #     time.sleep(0.2)
+            #     self.duration_int = p.duration
+            #     if self.duration_int == -1:
+            #         continue
+            #     duration_text = self.convert_ns(self.duration_int)
+            #     self.right_win.addstr(11, 34, "00:00/%s" %duration_text)
+            #     self.right_win.refresh()
+            #     break
             while True:
                 self.right_win.refresh()
                 self.left_win.refresh()
