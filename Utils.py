@@ -25,5 +25,9 @@ def display_len1(s):            # The dirty version
     original_length = len(s)
     nonchinese_length = RE.sub('', s)
     return original * 2 - nonchinese
+
+# Probably not correct, but works in a lot of situations
+def display_len2(s):
+    return sum([2 if ord(i) > 128 else 1 for i in s])
 #############################################################
 

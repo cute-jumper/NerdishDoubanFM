@@ -14,7 +14,7 @@ from select import select
 from DoubanFM import DoubanFM
 from DownloadManager import DownloadManager
 from MusicPlayer import MusicPlayer
-from Utils import make_local_filename
+from Utils import make_local_filename, display_len2
 
 MAX_CHANNEL = 7
 LYRIC_LENGTH = 40
@@ -121,7 +121,7 @@ class CursesUI(object):
             lyric_line = self.get_lyric_line(position_text)
             self.right_win.addstr(7, 2, '%', curses.color_pair(13))
             self.right_win.addstr(7, 4, lyric_line +
-                                  ' ' * (LYRIC_LENGTH - len(lyric_line)))
+                                  ' ' * (LYRIC_LENGTH - display_len2(lyric_line.decode('utf-8'))))
         else:
             self.right_win.addstr(7, 2, ' ' * (LYRIC_LENGTH + 2))
         self.right_win.refresh()
