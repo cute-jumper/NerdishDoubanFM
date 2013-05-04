@@ -31,3 +31,7 @@ def display_len2(s):
     return sum([2 if ord(i) > 128 else 1 for i in s])
 #############################################################
 
+def scanl(f, acc, l):
+    for x in l:
+        acc = f(acc, x)
+        yield acc

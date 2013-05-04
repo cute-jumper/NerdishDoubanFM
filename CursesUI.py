@@ -14,10 +14,17 @@ from select import select
 from DoubanFM import DoubanFM
 from DownloadManager import DownloadManager
 from MusicPlayer import MusicPlayer
-from Utils import make_local_filename, display_len2
+from Utils import make_local_filename, display_len2, scanl
+from operator import add
+from itertools import takewhile
+from Settings import DEBUG
+
 
 MAX_CHANNEL = 7
 LYRIC_LENGTH = 40
+
+if DEBUG:
+    import logging
 
 class CursesUI(object):
     def __init__(self, user_email, user_password, system_proxies, system_notification):
@@ -149,7 +156,11 @@ class CursesUI(object):
         self.right_win.clrtoeol()
         self.right_win.addstr(3, 2, ('%s %s' %(song_info['albumtitle'], song_info['public_time'])).encode(code))
         self.right_win.clrtoeol()
+        self.right_win.move(4, 2)
+        self.right_win.clrtoeol()
         self.right_win.addstr(5, 2, song_info['title'].encode(code), curses.A_BOLD)
+        self.right_win.clrtoeol()
+        self.right_win.move(6, 2)
         self.right_win.clrtoeol()
         self.right_win.addstr(13, 2, ('♡' if song_info['like'] == 0 else '♥').encode(code), curses.A_BOLD)
         
@@ -310,9 +321,13 @@ class CursesUI(object):
             self.end_curses_app()
         
     def get_lyric_line(self, position_text):
+        def get_longest_lyrics_len():
+            return len(list(takewhile(lambda s: s <= LYRIC_LENGTH,
+                            scanl(add, 0,
+                                  [2 if ord(i) > 127 else 1 for i in self.lyrics[idx - 1][1].decode('utf-8')]))))
         for (idx, line) in enumerate(self.lyrics):
             if line[0] > position_text:
-                return self.lyrics[idx - 1][1][:LYRIC_LENGTH] # Only part of the lyric if too long
+                return self.lyrics[idx - 1][1].decode('utf-8')[:get_longest_lyrics_len()] # Only part of the lyric if too long
         return '' #self.lyric[-1][1][:LYRIC_LENGTH] Bugs???
     
     def send_notification(self, song_info):
