@@ -156,11 +156,11 @@ class CursesUI(object):
         self.right_win.clrtoeol()
         self.right_win.addstr(3, 2, ('%s %s' %(song_info['albumtitle'], song_info['public_time'])).encode(code))
         self.right_win.clrtoeol()
-        self.right_win.move(4, 2)
+        self.right_win.move(4, 1)
         self.right_win.clrtoeol()
         self.right_win.addstr(5, 2, song_info['title'].encode(code), curses.A_BOLD)
         self.right_win.clrtoeol()
-        self.right_win.move(6, 2)
+        self.right_win.move(6, 1)
         self.right_win.clrtoeol()
         self.right_win.addstr(13, 2, ('♡' if song_info['like'] == 0 else '♥').encode(code), curses.A_BOLD)
         
