@@ -13,7 +13,8 @@ DOUBAN_FM_LOGIN_URL = 'http://www.douban.com/j/app/login'
 DOUBAN_FM_CHANNEL_URL = 'http://www.douban.com/j/app/radio/channels'
 DOUBAN_FM_API_URL = 'http://www.douban.com/j/app/radio/people'
 LIST_LENGTH = 20
-EXCLUDE_TITLES = [u'暑期开发训练营', u'流浪动物救助站']
+EXCLUDE_TITLES = [u'暑期开发训练营', u'流浪动物救助站',
+                  u'豆瓣阅读Android版更新']
 
 from Settings import DEBUG
 if DEBUG:
