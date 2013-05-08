@@ -98,6 +98,10 @@ class CursesUI(object):
             if channel['seq_id'] > MAX_CHANNEL: # TODO: List all channels
                 continue
             left_win.addstr((channel['seq_id'] + 2) * 2, 2, channel['name'])
+        left_win.addstr(19, 2, '-' * (l_width - 4))
+        left_win.addstr(20, 2, "上移: k或↑, 下移: j或↓")
+        left_win.addstr(21, 2, "登录: l, 选择: c")
+        left_win.addstr(22, 2, "退出: q")
         left_win.refresh()
     
     def setup_right_win(self):
@@ -132,7 +136,9 @@ class CursesUI(object):
         else:
             self.right_win.addstr(7, 2, ' ' * (LYRIC_LENGTH + 2))
         self.right_win.refresh()
-        return length == 40
+         # Really really really ugly... But it seems the problem was caused by
+         # the library... Well, I'm not sure though.
+        return abs(position_int / 100000000 - self.current_song_info['length'] * 10) <= 5
         
     def setup_console_win(self):
         console_x, console_y = 30, 16
