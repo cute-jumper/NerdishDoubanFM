@@ -83,7 +83,7 @@ class DoubanFM(object):
         cid = self.current_channel['channel_id']
         if len(self.playlist) < 2:
             self.playlist.extend(self.get_next_playlist(cid))
-        self.playlist = [song for song in self.playlist if song['title'] not in EXCLUDE_TITLES]
+        self.playlist = [song for song in self.playlist if song['title'] not in EXCLUDE_TITLES and not song.has_key('monitor_url')]
         song = self.playlist.pop(0)
         self.history.append(song)
         while len(self.history) > LIST_LENGTH:
