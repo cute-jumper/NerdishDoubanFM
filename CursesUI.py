@@ -314,9 +314,9 @@ class CursesUI(object):
                     p.toggle_paused_song()
                 elif ch == ord('l'):
                     if self.dbfm.login(self.user_email, self.user_password):
-                        self.add_console_output("Log in successful!")
+                        self.add_console_output("Successfully log in!")
                     else:
-                        self.add_console_output('Log in failure!')
+                        self.add_console_output('Failed to log in!')
                 else:
                     self.stop_and_remove(p, self.current_song_info['url'])
                     break
@@ -327,14 +327,15 @@ class CursesUI(object):
             self.end_curses_app()
         
     def get_lyric_line(self, position_text):
-        def get_longest_lyrics_len():
+        def get_longest_lyrics_len(index):
             return len(list(takewhile(lambda s: s <= LYRIC_LENGTH,
                             scanl(add, 0,
-                                  [2 if ord(i) > 127 else 1 for i in self.lyrics[idx - 1][1].decode('utf-8')]))))
+                                  [2 if ord(i) > 127 else 1 for i in self.lyrics[index][1].decode('utf-8')]))))
         for (idx, line) in enumerate(self.lyrics):
             if line[0] > position_text:
-                return self.lyrics[idx - 1][1].decode('utf-8')[:get_longest_lyrics_len()] # Only part of the lyric if too long
-        return '' #self.lyric[-1][1][:LYRIC_LENGTH] Bugs???
+                index = max(idx - 1, 0)
+                return self.lyrics[index][1].decode('utf-8')[:get_longest_lyrics_len(index)] # Only part of the lyric if too long
+        return self.lyrics[-1][1].decode('utf-8')[:get_longest_lyrics_len(-1)]
     
     def send_notification(self, song_info):
         description = '歌手: %s<br/>专辑: %s' %(song_info['artist'], song_info['albumtitle'])
