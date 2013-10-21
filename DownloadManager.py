@@ -5,6 +5,7 @@
 
 import requests
 import os
+import re
 
 from Settings import app_lrc_cache_dir, app_img_cache_dir, app_song_download_dir
 
@@ -17,19 +18,27 @@ class DownloadManager(object):
         filename = os.path.join(app_lrc_cache_dir, '%s_%s.lrc' %(song_info['title'].replace(' ', '-').replace(os.path.sep, ''), song_info['artist'].replace(' ', '-').replace(os.path.sep, '')))
         if not os.path.isfile(filename):
             try:
-                ret = requests.get(LYRIC_API_URL_TEMPLATE.format(title=song_info['title'].replace(os.path.sep, ''), artist=song_info['artist'].replace(os.path.sep, '')), proxies=self.proxies).json()
+                ret = requests.get(LYRIC_API_URL_TEMPLATE.format(title=re.sub(r'\([^)]*\)', '', song_info['title'].replace(os.path.sep, '')),
+                                                                 artist=re.sub(r'\([^)]*\)', '', song_info['artist'].replace(os.path.sep, ''))),
+                                   proxies=self.proxies).json()
+                if ret['count'] == 0:
+                    return None
+                lrc = requests.get(ret['result'][0]['lrc'], proxies=self.proxies, timeout=5) # Set timeout
             except:
                 return None
-            if ret['count'] == 0:
+            if lrc.ok:
+                with open(filename, 'w') as fout:
+                    fout.write(lrc.content)                
+                lines = lrc.content.split('\n')
+            else:
                 return None
-            lrc = requests.get(ret['result'][0]['lrc'], proxies=self.proxies)
-            with open(filename, 'w') as fout:
-                fout.write(lrc.content)                
-            lines = lrc.content.split('\n')
         else:
             with open(filename) as fin:
                 lines = fin.readlines()
         lines = filter(lambda x: len(x) != 0 and x.startswith('[0'), map(str.strip, lines))
+        if not lines:
+            os.remove(filename)
+            return None
         lyrics = dict()
         for line in lines:
             segments = line.split(']')

@@ -19,6 +19,7 @@ user_email = ''
 user_password = ''
 system_proxies = None
 system_notification = False
+show_lyric = True
 #########################################
 
 # Developer settings

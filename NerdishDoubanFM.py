@@ -26,5 +26,5 @@ if __name__ == '__main__':
         user_password = getpass('Password: ')
 
     from CursesUI import CursesUI
-    CursesUI(user_email, user_password, system_proxies, system_notification).run()
+    CursesUI(user_email, user_password, system_proxies, system_notification, show_lyric).run()
     

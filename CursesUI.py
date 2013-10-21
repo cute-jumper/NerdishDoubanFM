@@ -27,7 +27,7 @@ if DEBUG:
     import logging
 
 class CursesUI(object):
-    def __init__(self, user_email, user_password, system_proxies, system_notification):
+    def __init__(self, user_email, user_password, system_proxies, system_notification, show_lyric):
         self.current_channel = 1
         self.channel_list = None
         self.dbfm = DoubanFM(system_proxies)
@@ -41,6 +41,7 @@ class CursesUI(object):
         self.user_email = user_email
         self.user_password = user_password
         self.enable_notification = system_notification
+        self.show_lyric = show_lyric
         self.console_log = deque()
     def setup_main_win(self):
         #locale
@@ -206,14 +207,19 @@ class CursesUI(object):
         self.has_lyric = False
         self.current_song_info = self.dbfm.get_next_song_info()
         self.show_song_info(self.current_song_info)
-        ret = self.download_manager.download_lyric(self.current_song_info)
-        if ret == None:
+        # show lyric?
+        if not self.show_lyric:
             self.has_lyric = False
-            self.add_console_output('No lyric found!')
         else:
-            self.has_lyric = True
-            self.lyrics = ret
-            self.add_console_output('Lyric downloaded.')
+            ret = self.download_manager.download_lyric(self.current_song_info)
+            if ret == None:
+                self.has_lyric = False
+                self.add_console_output('No lyric found!')
+            else:
+                self.has_lyric = True
+                self.lyrics = ret
+                self.add_console_output('Lyric downloaded.')
+        # send notifications?
         if self.enable_notification:
             self.send_notification(self.current_song_info)
         p.play_song(self.current_song_info)
@@ -229,30 +235,24 @@ class CursesUI(object):
             self.left_win.move(2, 2)
             p = MusicPlayer()
             player_started = False
-            # while True:
-            #     time.sleep(0.2)
-            #     self.duration_int = p.duration
-            #     if self.duration_int == -1:
-            #         continue
-            #     duration_text = self.convert_ns(self.duration_int)
-            #     self.right_win.addstr(11, 34, "00:00/%s" %duration_text)
-            #     self.right_win.refresh()
-            #     break
             while True:
                 self.right_win.refresh()
                 self.left_win.refresh()
-                rlist, _, _ = select([sys.stdin], [], [], 1)
                 if player_started:
                     try:
                         position_int = p.position
                         if self.set_progress(position_int):
+                            if DEBUG: logging.info("set_progress true")
                             p.stop_song()
                             self.play_next_song(p)
                     except:
                         continue
+                self.left_win.refresh()
+                rlist, _, _ = select([sys.stdin], [], [], 1)
                 if not rlist:
                     continue
                 ch = self.left_win.getch()
+                if DEBUG: logging.info("getch: %c" %ch)
                 cursor_y, cursor_x = self.left_win.getyx()
                 if ch == ord('c'):
                     if cursor_x != 2:

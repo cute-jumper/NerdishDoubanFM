@@ -8,6 +8,11 @@ import os
 
 from Utils import make_local_filename
 
+from Settings import DEBUG
+
+if DEBUG:
+    import logging
+
 class MusicPlayer(object):
     def __init__(self):
         self.http_player = gst.parse_launch('souphttpsrc name=httpsrc ! tee name=t ! queue ! filesink name=filedest t. ! queue ! mad ! audioconvert ! alsasink')
@@ -48,6 +53,7 @@ class MusicPlayer(object):
         self.playmode = True
         
     def stop_song(self):
+        if DEBUG: logging.info("stop song!")
         self.set_play_state(self.http_player, gst.STATE_NULL)
         self.set_play_state(self.local_player, gst.STATE_NULL)
         self.playmode = False
