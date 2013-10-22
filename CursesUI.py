@@ -20,16 +20,17 @@ from itertools import takewhile
 from Settings import DEBUG
 
 
-MAX_CHANNEL = 7
+MAX_CHANNEL = 6
 LYRIC_LENGTH = 40
 
 if DEBUG:
     import logging
 
 class CursesUI(object):
-    def __init__(self, user_email, user_password, system_proxies, system_notification, show_lyric):
-        self.current_channel = 1
+    def __init__(self, user_email, user_password, system_proxies, system_notification, show_lyric, channels_file):
+        self.current_channel = None
         self.channel_list = None
+        self.channels_file = channels_file
         self.dbfm = DoubanFM(system_proxies)
         self.has_lyric = False
         self.download_manager = DownloadManager(system_proxies)
@@ -82,6 +83,13 @@ class CursesUI(object):
         self.console_win.border(0)
         self.console_win.addstr(0, 0, 'Console'.encode(code), curses.A_BOLD)
         
+    def setup_console_win(self):
+        console_x, console_y = 30, 16
+        console_height, console_width = 8, 49
+        self.console_win = console_win = curses.newwin(console_height, console_width, console_y, console_x)
+        self.console_win_restore()
+        console_win.refresh()
+        
     def setup_left_win(self):
         ## left window
         l_begin_x, l_begin_y = 0, 0
@@ -99,10 +107,20 @@ class CursesUI(object):
             if channel['seq_id'] > MAX_CHANNEL: # TODO: List all channels
                 continue
             left_win.addstr((channel['seq_id'] + 2) * 2, 2, channel['name'])
+        # Below is dirty and quick hack...
+        if os.path.exists(self.channels_file):
+            with open(self.channels_file) as fin:
+                self.extra_channel = eval(fin.readline())
+                self.extra_channel['channel_id'] = self.extra_channel['id']
+            # Set as if seq_id = MAX_CHANNEL + 1
+        else:
+            self.extra_channel = self.channel_list[MAX_CHANNEL + 1 + 1] # Because -1 exists
+        left_win.addstr((MAX_CHANNEL + 3) * 2, 2, self.extra_channel['name'].strip())
         left_win.addstr(19, 2, '-' * (l_width - 4))
         left_win.addstr(20, 2, "上移: k或↑, 下移: j或↓")
         left_win.addstr(21, 2, "登录: l, 选择: c")
         left_win.addstr(22, 2, "退出: q")
+        
         left_win.refresh()
     
     def setup_right_win(self):
@@ -117,8 +135,9 @@ class CursesUI(object):
         right_win.addstr(13, 36, "下一首(n)", curses.color_pair(1))
         right_win.addstr(10, 2, '[')
         right_win.addstr(10, 44, ']')
-
+        
         right_win.refresh()
+        
     def set_like_status(self):
         if True:
             right_win.addstr(14, 30, "加红心(f)")
@@ -126,6 +145,8 @@ class CursesUI(object):
             right_win.addstr(14, 29, "删除红心(d)")
     def set_progress(self, position_int):
         length = position_int * 40 / 1000000000 / self.current_song_info['length']
+        if length > 40:
+            length = 40         # Force it!
         self.right_win.addstr(10, 3, '-' * length + '>' + ' ' * (40 - length))
         position_text = self.convert_seconds(position_int, 1000000000)
         self.right_win.addstr(11, 34, position_text)
@@ -140,13 +161,6 @@ class CursesUI(object):
          # Really really really ugly... But it seems the problem was caused by
          # the library... Well, I'm not sure though.
         return abs(position_int / 100000000 - self.current_song_info['length'] * 10) <= 5
-        
-    def setup_console_win(self):
-        console_x, console_y = 30, 16
-        console_height, console_width = 8, 49
-        self.console_win = console_win = curses.newwin(console_height, console_width, console_y, console_x)
-        self.console_win_restore()
-        console_win.refresh()
         
     def add_console_output(self, message):
         self.console_log.append(message)
@@ -200,6 +214,9 @@ class CursesUI(object):
                 ret = i
             elif i['seq_id'] <= MAX_CHANNEL: # TODO
                 self.left_win.addstr((i['seq_id'] + 2) * 2, 2, i['name'])
+        if seq_id == MAX_CHANNEL + 1: # DIRTY!
+            self.left_win.addstr(cursor_y, 2, self.extra_channel['name'], curses.color_pair(1))
+            ret = self.extra_channel
         self.left_win.refresh()
         return ret
 
@@ -260,6 +277,7 @@ class CursesUI(object):
                         continue
                     if player_started:
                         self.stop_and_remove(p, self.current_song_info['url'])
+                    player_started = False # Can't leave out this
                     current_channel = self.get_channel_to_play(cursor_y)
                     if current_channel == None:
                         continue
@@ -301,7 +319,7 @@ class CursesUI(object):
                         self.add_console_output("Unhearted %s failure!" %self.current_song_info['title'])
 
                 elif ch == ord('j') or ch == curses.KEY_DOWN:
-                    if cursor_y < (MAX_CHANNEL + 2 )* 2:
+                    if cursor_y <= (MAX_CHANNEL + 2) * 2:
                         self.left_win.move(cursor_y + 2, 2)
                     else:
                         continue
@@ -320,9 +338,10 @@ class CursesUI(object):
                 else:
                     self.stop_and_remove(p, self.current_song_info['url'])
                     break
-        except:
+        except Exception, e:
             if player_started and self.current_song_info != None:
                 self.stop_and_remove(p, self.current_song_info['url'])
+            if DEBUG: logging.info(e)
         finally:
             self.end_curses_app()
         

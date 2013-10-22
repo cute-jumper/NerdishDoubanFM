@@ -20,6 +20,7 @@ user_password = ''
 system_proxies = None
 system_notification = False
 show_lyric = True
+channels_file = os.path.join(app_cache_dir, '.channels')
 #########################################
 
 # Developer settings

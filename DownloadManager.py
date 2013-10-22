@@ -23,7 +23,7 @@ class DownloadManager(object):
                                    proxies=self.proxies).json()
                 if ret['count'] == 0:
                     return None
-                lrc = requests.get(ret['result'][0]['lrc'], proxies=self.proxies, timeout=5) # Set timeout
+                lrc = requests.get(ret['result'][0]['lrc'], proxies=self.proxies, timeout=2) # Set timeout
             except:
                 return None
             if lrc.ok:

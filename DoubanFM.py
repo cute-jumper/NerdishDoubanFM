@@ -12,6 +12,7 @@ APP_INFO = {'app_name': app_name, 'version': version}
 DOUBAN_FM_LOGIN_URL = 'http://www.douban.com/j/app/login'
 DOUBAN_FM_CHANNEL_URL = 'http://www.douban.com/j/app/radio/channels'
 DOUBAN_FM_API_URL = 'http://www.douban.com/j/app/radio/people'
+DOUBAN_FM_SEARCH_URL = 'http://douban.fm/j/explore/search?query={keyword}&start=0&limit=20'
 LIST_LENGTH = 20
 EXCLUDE_TITLES = [u'暑期开发训练营', u'流浪动物救助站',
                   u'豆瓣阅读Android版更新']
@@ -99,4 +100,65 @@ class DoubanFM(object):
     def get_channel_list(self):
         r = requests.get(DOUBAN_FM_CHANNEL_URL, proxies=self.proxies)
         return r.json()['channels']
+    
+    def search_channels(self, keyword):
+        r = requests.get(DOUBAN_FM_SEARCH_URL.format(keyword=keyword), proxies=self.proxies)
+        return r.json()['data']
+
+if __name__ == '__main__':
+    import os
+    from Settings import app_cache_dir, system_proxies, channels_file
+    
+    if not os.path.exists(app_cache_dir):
+        os.mkdir(app_cache_dir)
+        print '[Message]: mkdir', app_cache_dir
+
+    bold_color_to_code = {'gray':'1;30',
+                 'red': '1;31',
+                 'green': '1;32',
+                 'yellow': '1;33',
+                 'blue': '1;34',
+                 'magenta': '1;35',
+                 'cyan': '1;36',
+                 'white': '1;37',
+                 'crimson': '1;38',
+                 'hred': '1;41',
+                 'hgreen': '1;42',
+                 'hbrown': '1;43',
+                 'hblue': '1;44',
+                 'hmagenta': '1;45',
+                 'hcyan': '1;46',
+                 'hgray': '1;47',
+                 'hcrimson': '1;48',
+                 }
+    def color_text(color, text):
+        code = bold_color_to_code.get(color.lower(), '0')
+        return '\033[%sm%s\033[0m' %(code, text)
+        
+    keyword = raw_input('Please input a keyword to search the channel: ')
+    dbfm = DoubanFM(system_proxies)
+    data = dbfm.search_channels(keyword)
+    if data['total'] == 0:
+        print '[Message]: No channels found.'
+        exit(0)
+    for i, c in enumerate(data['channels']):
+        print color_text('red', "Channel %d" %i)
+        print '  - ' + color_text('green', 'name:') + ' %s' %c['name'].strip()
+        print '  - ' + color_text('green', 'intro:') + ' %s' %c['intro'].strip()
+        print '  - ' + color_text('green', 'creator:') + ' %s' %c['creator']['name'].strip()
+        print '  - ' + color_text('green', 'hot songs:') + ' %s' %(' | '.join(map(lambda x: x.strip(), c['hot_songs'])))
+        print '  - ' + color_text('green', 'song number:') + ' %d' %c['song_num']
+        
+    try:
+        num = int(raw_input("Please input a channel id(other keys to exit): Channel "))
+        if num >= len(data['channels']):
+            raise Exception()
+    except:
+        print color_text('red', 'An error occurs. Exit.')
+        exit(0)
+    
+    with open(channels_file, 'w') as fout:
+        fout.write(str(data['channels'][num]))
+    print "[Message]: Save to %s." %channels_file
+    
 
