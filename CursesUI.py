@@ -20,7 +20,7 @@ from itertools import takewhile
 from Settings import DEBUG
 
 
-MAX_CHANNEL = 6
+MAX_CHANNEL = 9
 LYRIC_LENGTH = 40
 
 if DEBUG:
@@ -103,19 +103,18 @@ class CursesUI(object):
                               'name': u'红心兆赫',
                               'name_en': 'Hearted Radio',
                               'seq_id': -1}] + self.dbfm.get_channel_list()
-        for channel in self.channel_list:
-            if channel['seq_id'] > MAX_CHANNEL: # TODO: List all channels
-                continue
-            left_win.addstr((channel['seq_id'] + 2) * 2, 2, channel['name'])
+        if DEBUG: logging.info(self.channel_list)
         # Below is dirty and quick hack...
         if os.path.exists(self.channels_file):
             with open(self.channels_file) as fin:
-                self.extra_channel = eval(fin.readline())
-                self.extra_channel['channel_id'] = self.extra_channel['id']
-            # Set as if seq_id = MAX_CHANNEL + 1
-        else:
-            self.extra_channel = self.channel_list[MAX_CHANNEL + 1 + 1] # Because -1 exists
-        left_win.addstr((MAX_CHANNEL + 3) * 2, 2, self.extra_channel['name'].strip())
+                extra_channel = eval(fin.readline())
+                extra_channel['channel_id'] = extra_channel['id']
+                self.channel_list[MAX_CHANNEL - 1] = extra_channel;
+
+        for idx, channel in enumerate(self.channel_list):
+            if idx >= MAX_CHANNEL: # TODO: List all channels
+                break
+            left_win.addstr((idx + 1) * 2, 2, channel['name'].strip())
         left_win.addstr(19, 2, '-' * (l_width - 4))
         left_win.addstr(20, 2, "上移: k或↑, 下移: j或↓")
         left_win.addstr(21, 2, "登录: l, 选择: c")
@@ -203,22 +202,20 @@ class CursesUI(object):
 
 
     def get_channel_to_play(self, cursor_y):
-        seq_id = (cursor_y / 2 - 2)
-        if (seq_id == -1 or seq_id == 0) and not self.dbfm.is_logined():
+        selected_idx = cursor_y / 2 - 1
+        selected_channel = self.channel_list[selected_idx]
+        if selected_idx == 0 and not self.dbfm.is_logined():
             self.add_console_output('Please log in first! Press "l".')
             return None
-        ret = None
-        for i in self.channel_list:
-            if i['seq_id'] == seq_id:
-                self.left_win.addstr((i['seq_id'] + 2) * 2, 2, i['name'], curses.color_pair(1))
-                ret = i
-            elif i['seq_id'] <= MAX_CHANNEL: # TODO
-                self.left_win.addstr((i['seq_id'] + 2) * 2, 2, i['name'])
-        if seq_id == MAX_CHANNEL + 1: # DIRTY!
-            self.left_win.addstr(cursor_y, 2, self.extra_channel['name'], curses.color_pair(1))
-            ret = self.extra_channel
+        for idx, channel in enumerate(self.channel_list):
+            if idx == selected_idx:
+                self.left_win.addstr((selected_idx + 1) * 2, 2,
+                                     selected_channel['name'],
+                                     curses.color_pair(1))
+            elif idx < MAX_CHANNEL:
+                self.left_win.addstr((idx + 1) * 2, 2, channel['name'])
         self.left_win.refresh()
-        return ret
+        return selected_channel
 
     def play_next_song(self, p):
         self.has_lyric = False
